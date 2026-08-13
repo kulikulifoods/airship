@@ -32,6 +32,15 @@ const require = createRequire(import.meta.url);
 
 // Hop-by-hop headers must not be forwarded, and length/encoding are recomputed
 // when we rewrite the HTML body.
+//
+// The framing headers go too. Upstream sets them to keep *other* origins from
+// embedding the app, but a surface response is served same-origin into our own
+// canvas iframe, so forwarding them makes the browser refuse to render the very
+// document we just injected the hook into. Hosts that send `x-frame-options:
+// DENY` on every response (Shopify, and any app behind a default-deny CDN
+// policy) are otherwise unpreviewable: the canvas paints, the frame stays
+// blank, and the only clue is a network-level console line, since a blocked
+// document raises no page error.
 const STRIP_ON_INJECT = new Set([
   "connection",
   "keep-alive",
@@ -43,6 +52,9 @@ const STRIP_ON_INJECT = new Set([
   "upgrade",
   "content-length",
   "content-encoding",
+  "x-frame-options",
+  "content-security-policy",
+  "content-security-policy-report-only",
 ]);
 
 const TUNNEL_TIMEOUT_MS = 60_000;
